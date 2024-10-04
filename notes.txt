@@ -1,0 +1,146 @@
+Stackens pointers är uppe och neråt.
+
+Stack is always stored on RAM (depends on architecture but almost always). 
+
+Stack segment is the start point of your stack. Then the pointer is decremented downwards. 
+
+The bootloader instructions is stored onto memory and then loaded into RAM.
+
+Enumeration of hexa is 0-9 then A-F. Every 4 bits are represented by one character. The first four bit by the first character and so on. 
+And because 64bit system only makes use of 64bit, the hexa is always 4 long e.g. 0x8000. Can be higher by applying software on top of this and splitting. 
+
+int 0x10 interupts the code and triggers the interupt handler, this print whatever's in AL register. Only need 2 hexa.
+
+
+06) 
+
+There is offsets for different types : code (instruction) CS, data DS, stack SS, extra (userdefined) ES. This separates the memory management nicely.
+And if you need to change where it runs, you can simply offset these adresses.
+
+Memory offsets are 16 bit, meaning each memory segment is 64KB. 
+
+Harddisk are divided into : cylinder, head, sector. Track is the circular track around every disk. Combining all tracks vertically you have a cylinder. 
+The sector is subdivision of a track of 512 bytes. 
+
+Carry bit is the bit saying if there was an overflow at the register. All register has an extra bit to specify this.
+
+07) 
+
+Real modes program uses BIOS subroutines and OS subroutines. Protected mode only uses OS subroutines. Protected can use 16 and 32 bits, real mode only 16.
+The real mode has a one to one mapping between physical and virtual memory. The protected mode doesn't, because it uses virtual memory. Virtual memory 
+creates the illusion of a contigous memory for a program, even if the reality is its scattered around the memory. Each virtual address in two different programs
+can have different mappings. Paging and swapping : virtual memory is bigger than physical memory, by paging and swapping data between the RAM and disk seamlesly.
+Automatically moved by the OS using methods like "Last Recently Used". Rather than for developers to figure out the least used resources and do it manually. Paging
+is determining size of a virtual memory block (same across programs), or page. Now there is Memory management unit (mmu) that automatically translates these memory 
+adresses. 
+
+Translation look-aside buffer (TLB) translates the virtual to physical memory, it also uses a cache. If virtual memory is phyiscally scattered, then the TLB misses
+chance is higher and it will take longer time. The MMU and Memory Controller will do one read for every relevant *page*, and then stitch together the relevant bytes
+into one 64 byte cache line. 
+
+Bootloader is done in realmode for compatability reasons mainly. It also doesnt need anything fancy, it is not high complexity.
+
+VGA has two bytes, one for letter one for style. 
+
+09)
+
+The Global Descriptor Table (GDT) is the segment descriptors and holds a flag for permission, a base adress, and size/limit of the segment. 
+They are allowed to overlap, meaning the code and the data can have overlapping adresses.
+GDT is setup for all processes running on the system. An offset is used to index which GDT entry to use. 
+First entry is the null descriptor, which all segment pointers points to by default. If an index doesn't exist an General Protection Fault (GPF) is thrown. 
+GDT is only used while in protected mode. 
+
+CS remains in the same position unless a "jump" or "call" is called. Instruction pointer is always updated to the next instruction. 
+
+Okej fattar nu men ärligt gpt har bara förvirrat mig i cirklar. 
+
+Code segment register t.ex. är 16 bitar. Instruction Pointer (IP) är 16 bitar och används som offset för att tala om vilken byte som ska laddas. När en call eller jump sker så kan CS ändras. 
+
+Ett segment i realmode är 64 KB (16 bitar). När vi shiftar med 4 bytes så säger vi att varje startsegment inuti ett segment är 16 bytes ifrån varandra (här fuckade jag för gpt fick mig tro vi inte hade flera startadresser inuti ett segment). Och eftersom vi har en offset på 16 bitar (64kb) så kan våra startsegment överlappa).
+
+Vi kan helt enkelt nå fler bytes genom att shifta 👍🏾 😄
+
+10)
+
+Kerneln operations are considered "critical code executions" where it configures hardware registers. Realmode is very simple. Protected mode is more complex with
+GDT, priveleges, multitasking, and so on. This relies on careful states. Interupting these could lead them to become inconsistent.
+
+There is a interupt descriptor table in Protected mode that handles the interupts to maintain consistent system. 
+
+CPU Pipeline : 
+1. Fetch instruction from memory. The segment base adress and the instruction pointer are used to calculate the physical adress for next instruction and the given
+to the Program Counter (PC). Then PC is incremented to the next instruction. The control unit controls the CPU and feeds it these instructions. It also recognizes
+if the instruction of last one is a jump or a call, in which case the IP of next IP should be offset, or we should have a new base adress.  
+2. Decode. The CU decodes the instructions into what the CPU actually needs to perform. 
+3. Execute. Using e.g. ALU in the CPU (addition, subtraction, or and), adress calculation (offset + baseadress) for storing or reading, branch evaluation - 
+4. Memory Access. Read data from adress but doesnt store in register yet. Write to a memory adress. Not needed for arithemetic operations.
+5. Write Back. Wrties to registers for calculations or loads. 
+
+Branching is when you deviate from executing instructions in order. Unconditional like jump or conditional like jump if equal.
+
+The control flow is which instructions a program takes during its flow (run) https://en.wikipedia.org/wiki/Control_flow
+
+Cycle 1: Instruction 1 is fetched.
+Cycle 2: Instruction 1 is decoded while Instruction 2 is fetched.
+Cycle 3: Instruction 1 is executed, Instruction 2 is decoded, and Instruction 3 is fetched.
+Cycle 4: Instruction 1 accesses memory, Instruction 2 is executed, Instruction 3 is decoded, and Instruction 4 is fetched.
+Cycle 5: Instruction 1 writes back, Instruction 2 accesses memory, Instruction 3 is executed, Instruction 4 is decoded, and Instruction 5 is fetched.
+
+Far Jump. jumps to a segment to the standard segment in protected mode, since we don't want any old instructions left from real mode. 
+
+11)
+
+Cross-compiler. Some code, are specific to the system (e.g. Arm or x86) or operating system (Windows 11 or Ubuntu 20.04) that you are running it on. This means your
+code that you write might need to be transformed into your system and os. In this case, we are using assembly for linux x86 system. I am working on a mac, hence e.g.
+the register names will look different. Because of this, we need to use a cross-compiler to replace the standard compiler. 
+
+I am using a cross-assembler (nasm) for this project. 
+
+Some compilers produce assembly code as an intermediary translation, and then to machine code. Assembler makes the assembly code into machine code. 
+
+12) 
+
+Object code: Typically all source code is converted into object code. Then it is "linked" into the final machine code (executable). It's what you get when compiling
+C or C++, the .o or .obj file. 
+
+Linker: After compiling there are still unresolved symbols. Unresolved symbols are function calls, library function calls, global variables in other files.
+The link finds the references to their memory adress of e.g. the function call. It also on memory allocation, where in memory the code will reside. 
+Finally it produces a ready to run executable, or a library file with all that we need. 
+There is also dynamic and static linking. In static linking every reference is crammed into the executable. In dynamic linking, there is instead references to the
+"shared library". It is never embedded into the resulting executable. This means it takes less space, doesn't depend on when it was compile (if library was updated).
+Shared and static libarries have the same "code", but you compile it to be either of them ( .so , .dll or a. , .lib respectively).
+
+Data section is where variables are defined. Code section is where processing of this data (functions) are defined. Local variables are stored on the stack. 
+
+Disassembler converts the machine code back to assembly code. You will see variables, function labes, etc. have dissapeared. They instead map to memory adresses. 
+In hexa two bytes is one digit. After disassembling the function.c it will look like this. Also the register and protected mode we write to is 32 bit 
+so we must use 32 bit. 
+
+00000000  B8BABA0000        mov eax,0xbaba
+00000005  C3                ret
+
+
+13) The kernel is the interface between software and hardware. When you run a program, the kernel gets a system call to start allocate resources. It then goes from 
+user mode to kernel mode to fullfil the request. The kernel handles permissions essentially, like reading, writing, interacting with memory. Whenever a program
+does this, it needs to go by the kernel that switches to kernel mode. 
+
+Kernels are different for each OS, it's only software. In the x86, we specify the type of system call we'd like to make in the EAX register, the first argument in 
+EBX, ... and then perform an interupt. Then our kernel software will take over and look at which system call we did.
+
+Page tables in the kernel tells us which processses have rights to what memory. If everything works correctly, the permission of a page table for a certain process 
+should be limited by its text (code) segment, data segment, heap segment, stack segment, memory-mapped regions (other libraries in memory). 
+
+Executable files are loaded into the CPU by the kernel. It allocates the memory and so on. CPU starts running it in User mode. 
+
+In assembly, you put a 0 after a string to say that the string terminates there. It will be stored as a byte 0x00. 
+
+When you are building an OS there is nothing managing your memory management. So when you build using the linker, you need to specify the expected start adress of 
+your .bin file. In this case ``i386-elf-ld -o kernel.bin -Ttext 0x1000 kernel_entry.o kernel.o --oformat binary``here. This adress is the offset for the kernel.
+
+Hexa is usually indexed by thousands e.g. 0x0000, 0x1000. To allow for growth of a program, easy memory calculations, and because memory works more efficient when
+data starts at expected memory boundaries e.g. 0x_000. 
+
+Make files builds the source files. It not only automates it, but also only rebuild it if the source code has been changed. First (all) is the default rule when 
+no parameters specified. E.g. main.o : main.c  says rebuild main.o if main.c changes. Uses timestamps of the files. Usually just compiles the dependcy file. 
+
+ELF means Executable Linkable Format. 
